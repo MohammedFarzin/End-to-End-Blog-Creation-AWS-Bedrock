@@ -1,6 +1,7 @@
 import boto3
 import botocore
 import json
+import datetime
 
 
 def blog_generation(blog_topic):
@@ -29,6 +30,35 @@ def blog_generation(blog_topic):
     except Exception as e:
         print(e)
         return ""
-    
+
+
+def save_blog_details(s3_key, s3_bucket, generate_blog):
+    s3 = boto3.client('s3')
+    try:
+        s3.put_object(Bucket=s3_bucket, Key=s3_key, Body=generate_blog)
+        print("Code saved to s3 bucket")
+    except Exception as e:
+        print(e)
+        return ""
 
 def lambda_handler(event, context):
+    event = json.loads(event['body'])
+    blog_topic = event['blog_topic']
+
+    generate_blog = blog_generation(blog_topic)
+
+    if generate_blog:
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        s3_key = f"blog_output/{current_time}_{blog_topic}.txt"
+        s3_bucket = 'aws_bedrock_demo'
+        save_blog_details(s3_key, s3_bucket, generate_blog)
+    else:
+        print("Blog generation failed")
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps("Blog generated successfully")
+    }
+        
+
+
